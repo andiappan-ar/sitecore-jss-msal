@@ -21,7 +21,7 @@ Validated requests will serve the requested page JSON and non-validated requests
 
 
 # Enable Azure AD authentication in rendering-host using MSAL library
-> Refernce detailed blog here: https://andisitecore.wordpress.com/2023/05/13/sitecore-headless-javascriptservices-authenticate-using-msal-library-part1authentication/
+> Refernce detailed blog here: [https://andisitecore.wordpress.com/2023/05/13/sitecore-headless-javascriptservices-authenticate-using-msal-library-part1authentication/](https://andisitecore.wordpress.com/2023/06/14/sitecore-headless-layout-service-authentication-using-msal-library-part2-azure-ad-authentication/)
 
 Please do these changes on top your running rendering-host node js.
 
