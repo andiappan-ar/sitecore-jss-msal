@@ -1,7 +1,5 @@
 # Sitecore layout service Azure AD authentication & validation 
 
-> Refernce detailed blog here: https://andisitecore.wordpress.com/2023/05/13/sitecore-headless-javascriptservices-authenticate-using-msal-library-part1authentication/
-
 # 📝 Introduction
 
 **This repository is a sample project for authenticating & validating SItecore layout services**, you can follow the instruction to achieve the results.
