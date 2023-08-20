@@ -1,60 +1,170 @@
-# node/express scaffolding for SSR outside of Sitecore Content Delivery
+# Sitecore layout service Azure AD authentication & validation 
 
-This is a sample setup showing one one of how you can configure rendering server on top of node.js and Express.
+> Refernce detailed blog here: https://andisitecore.wordpress.com/2023/05/13/sitecore-headless-javascriptservices-authenticate-using-msal-library-part1authentication/
 
-The setup is using `sitecore-jss-proxy` that enables request proxying to Sitecore CD along with the http cookies to enable tracking, personalization and contact identification.
+# 📝 Introduction
 
-[Documentation (Experience Platform)](https://doc.sitecore.com/xp/en/developers/hd/210/sitecore-headless-development/walkthrough--rendering-a-jss-app-server-side-using-the-headless-jss-proxy.html)
+**This repository is a sample project for authenticating & validating SItecore layout services**, you can follow the instruction to achieve the results.
 
-> This is a sample setup that is not officially supported by Sitecore.
+# ✋ Techs invloved
+* Sitecore CM/CD – XM/Cloud/XP for the
+* Rendering host – SSR node headless proxy
+* Azure AD
+* User authentication using MSAL node js Library
+* Server-side token validation using Microsoft identity.
 
-You can use this as a starting point to unlock deployment of your JSS apps to any managed node.js hosting environment (Azure App Service, Heroku, IBM BlueMix, you name it).
+# 💡Solution
+When the user initiates a request to the headless website aka rendering-host. This rendering-host has an MSAL library that allows the user to authenticate and get an access token.
+This access token is attached in the request header of the layout service call.
+Now Sitecore backend will validate the access token present in the request header.
+Validated requests will serve the requested page JSON and non-validated requests will serve the 404-page JSON.
 
-## Pre-requisites
+![sitecore-jss-msal-auth-flow - andisitecore](https://github.com/andiappan-ar/sitecore-jss-msal/assets/11770345/8009d52d-4934-46a0-b262-aca56b945d53)
 
-1.  Your Sitecore instance needs to be configured with JSS.Server and the API Key provisioned. Read more [here](https://jss.sitecore.com/docs/getting-started/jss-server-install) how to set it up.
 
-    > LayoutService API should be returning output if you make the following request to your Sitecore instance. `http://sitecore-host/sitecore/api/layout/render/jss?item=/&sc_apikey={YOUR_API_KEY}`
+# Enable Azure AD authentication in rendering-host using MSAL library
+> Refernce detailed blog here: https://andisitecore.wordpress.com/2023/05/13/sitecore-headless-javascriptservices-authenticate-using-msal-library-part1authentication/
 
-1.  Build your JS app bundle with `jss build`.
+Please do these changes on top your running rendering-host node js.
 
-    > You can use any of the JSS sample apps. Other apps must support server side rendering (JSS integrated mode) to operate with this project.
+## 🔧 Setup rendering host
 
-1.  Deploy the build artifacts from your app (`/dist` or `/build` within the app) to the `sitecoreDistPath` set in your app's `package.json` under the proxy root path. Most apps use `/dist/${jssAppName}`, for example `$proxyRoot/dist/${jssAppName}`.
+### env file setup
 
-> Another way to deploy the artifacts to the proxy is to change the `instancePath` in your app's `scjssconfig.json` to the proxy root path, and then use `jss deploy files` within the app to complete the deployment to the proxy.
+Change your env files sitecore & azure configurations
+```sh
+SITECORE_JSS_APP_NAME=your-appname
+SITECORE_JSS_SERVER_BUNDLE='../dist/your-appname/server.bundle'
+SITECORE_API_HOST=https://your-appname.com/
+SITECORE_API_KEY={APIKEY}
+SITECORE_LAYOUT_SERVICE_ROUTE=
+SITECORE_PATH_REWRITE_EXCLUDE_ROUTES=
+SITECORE_ENABLE_DEBUG=
+PORT=4000
+AZ_ENABLE_AUTH=true
+AZ_CLOUD_INSTANCE="https://login.microsoftonline.com/"
+AZ_TENANT_ID="AZURE_TENANT_ID"
+AZ_CLIENT_ID="AZURE_CLIENT_ID"
+AZ_CLIENT_SECRET="AZURE_CLIENT_SECRET"
+AZ_REDIRECT_URI="http://localhost:4000/auth/redirect"
+AZ_POST_LOGOUT_REDIRECT_URI="http://localhost:4000/"
+AZ_AUTHTOKEN_SCOPE=""
+EXPRESS_SESSION_SECRET="EXPRESS_SESSION_SECRET"
+EXPRESS_SESSION_TIMEOUT_MS=7200000
+```
+### Auth folder setup
+Next, go to the index.ts file and make these changes. Add the below lines after the lines of server static apps,
 
-## Setup
+```
+/*
+Auth codes
+*/
+if (process.env.AZ_ENABLE_AUTH === 'true') {
+  console.log('===============>>>>> AUTH Enabled');
+ 
+  var cookieParser = require('cookie-parser');
+  var authRouter = require('./auth/auth');
+  //var session = require('express-session');
+  var cookieSession = require('cookie-session')
+ 
+  /**
+   * Using express-session middleware for persistent user session. Be sure to
+   * familiarize yourself with available options. Visit: https://www.npmjs.com/package/express-session
+   */
+  server.set('trust proxy', 1);
+  //server.enable('trust proxy');
+  server.use(
+    cookieSession({
+      keys: [process.env.EXPRESS_SESSION_SECRET],
+      name: 'jssConnect.sid',      
+      httpOnly:true,      
+      maxAge:Number(process.env.EXPRESS_SESSION_TIMEOUT_MS||7200000)
+    })
+  );
+ 
+  server.use(express.json());
+  server.use(cookieParser());
+  server.use(express.urlencoded({ extended: false }));  
+ 
+  server.all('*', function (req: any, res, next:any) {
+    try {
+      console.log('===============>>>>> Middleware called');
+       
+      if (req.url.includes('/auth/signin') || req.url.includes('/auth/redirect') || req.url.includes('/auth/getSessionLogger')) {
+        console.log('--------- AUTH INPROGRESS');
+      }
+      else
+      {
+        if (req?.session?.isAuthenticated) {
+          console.log('✔✔✔✔✔✔✔✔✔✔ USER AUTHENTICATED');
+        }
+        else {
+          req.session.RequestedURL = req.url !== '/auth/signout' ? req.url : '/';
+          console.log('xxxxxxxxxx USER NOT AUTHENTICATED : ' + 'RequestedURL=' + req.url);
+          return res.redirect('/auth/signin');
+        }
+      }
+        
+      next();
+    } catch (error) {
+      res.redirect('/auth/globalerror?gloerr='+JSON.stringify(error));
+    }
+  });
+  server.use('/auth', authRouter);
+}
+else {
+  console.log('===============>>>>> AUTHENTICATION SETTINGS Disabled');
+}
+ 
+/*
+Auth codes
+*/
+```
 
-Open `config.js` and specify your application bundle and connection settings to your Sitecore CD instance. `config.js` is heavily commented for your perusal.
+### Configure start/build command in package.json
 
-### Environment Variables
+Since we are using js files in the template, we have to change the package.json start and build commands. Follow as below,
 
-The following environment variables can be set to configure the proxy instead of modifying `config.js`. You can use the `.env` file located in the root of the app or set these directly in the environment (for example, in containers).
+```
+"scripts": {
+  "start": "nodemon ./src/index.js",
+  "build": "npx tsc"
+}
+```
 
-| Parameter                              | Description                                                                                                                                |
-| -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
-| `SITECORE_JSS_APP_NAME`                | The JSS app's name. Used in dictionary service URL, and the default value of `SITECORE_JSS_SERVER_BUNDLE` if it's not set.                 |
-| `SITECORE_JSS_SERVER_BUNDLE`           | Path to the JSS app's `server.bundle.js` file.                                                                                             |
-| `SITECORE_API_HOST`                    | Sitecore instance host name. Should be HTTPS in production.                                                                                |
-| `SITECORE_LAYOUT_SERVICE_ROUTE`        | Optional. The path to layout service for the JSS application. Defaults to `/sitecore/api/layout/render/jss`.                               |
-| `SITECORE_API_KEY`                     | The Sitecore SSC API key your app uses.                                                                                                    |
-| `SITECORE_PATH_REWRITE_EXCLUDE_ROUTES` | Optional. Pipe-separated list of absolute paths that should not be rendered through SSR. Defaults can be seen in [config.js](./config.js). |
-| `SITECORE_ENABLE_DEBUG`                | Optional. Writes verbose request info to stdout for debugging. Defaults to `false`.                                                        |
 
-## Build & run
 
-1.  Run `npm install`
+### Configure tsconfig.json
+Get the tsconfig.json from the repo & paste it into your solution. This is to allow compiling the javascript files.
 
-1.  Run `npm run start`
+https://github.com/andiappan-ar/sitecore-jss-msal/blob/main/src/ssr/tsconfig.json
 
-You should be able to see the following message:
-`server listening on port 3000!` and see all the communication between this server and your Sitecore CD instance in the console.
+## ▶️ Run the rendering host
 
-More info on this setup can be found [here](https://jss.sitecore.com/docs/fundamentals/application-modes#headless-server-side-rendering-mode).
+```
+> npm run build
+> npm run start
 
-## Production Notes
+```
+Below screen shot explained the flows with the help of logs.
 
-- Ensure that `debug: false` in `config.js`. Console output will cause terrible scaling.
-- Customise `error.html` in case your app throws HTTP 500 errors.
-- Load test the proxy prior to launch to ensure proper performance levels for your needs.
+![image](https://github.com/andiappan-ar/sitecore-jss-msal/assets/11770345/2fd3f0d0-3988-47db-83ec-96dff8ea8837)
+
+
+1. User requesting page. The requested URL is http://localhost:4000/
+2. Code logic tries to validate the user & redirect to the login page login.microsoft.com
+3. Post user login, Control returns back to the website http://localhost:4000/redirect. Now auth layer is able to get the access token & save it in the session cookie.
+4. User authentication is validated.
+5. Layet service is get called and it’s returning the layout service response.
+
+
+# Validate layout service access token from Sitecore CD/CM
+> Refernce detailed blog here: https://andisitecore.wordpress.com/2023/05/13/sitecore-headless-javascriptservices-authenticate-using-msal-library-part1authentication/
+
+## 🔧 Setup layout service authetication pipeline
+
+
+
+## 🔧 Setup microsoft identity wrapper
+
+## ▶️ Hit the layout service
