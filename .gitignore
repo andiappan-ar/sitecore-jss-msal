@@ -3,3 +3,7 @@
 ################################################################################
 
 /.vs/slnx.sqlite
+/src/platform/.vs/YourProjectName.Foundation.Security
+/src/platform/Foundation/Security/YourProjectName.Foundation.Security/.vs/OneHub.Foundation.Security
+/src/platform/packages
+/.vs/sitecore-jss-msal1/v16
