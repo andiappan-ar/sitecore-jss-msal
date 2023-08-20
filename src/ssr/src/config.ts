@@ -32,6 +32,8 @@ const dictionaryService = new RestDictionaryService({
   cacheTimeout: 60,
 });
 
+const cookieLib = require('./lib/cookie');
+
 /**
  * @type {ProxyConfig}
  */
@@ -105,6 +107,14 @@ export const config: ProxyConfig = {
     // outside local development. Use a real CA-issued certificate.
     secure: true,
     xfwd: true,
+    /*
+     * Add custom headers for the layout service here
+     */
+    onProxyReq: function (proxyReq: any, req: any) {
+      if (process.env.AZ_ENABLE_AUTH === 'true') {         
+        proxyReq.setHeader('Authorization', cookieLib.getCookie('jssAT', req));        
+      }
+    },
   },
   /**
    * Custom headers handling.
