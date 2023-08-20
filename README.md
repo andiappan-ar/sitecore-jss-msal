@@ -161,10 +161,27 @@ Below screen shot explained the flows with the help of logs.
 # Validate layout service access token from Sitecore CD/CM
 > Refernce detailed blog here: https://andisitecore.wordpress.com/2023/05/13/sitecore-headless-javascriptservices-authenticate-using-msal-library-part1authentication/
 
-## 🔧 Setup layout service authetication pipeline
+## ✋ Configure Azure AD details
+Configure below AD details in the app config > [src/platform/Foundation/Security/YourProjectName.Foundation.Security/App_Config/Include/Foundation/Foundation.Security.config](https://github.com/andiappan-ar/sitecore-jss-msal/blob/main/src/platform/Foundation/Security/YourProjectName.Foundation.Security/App_Config/Include/Foundation/Foundation.Security.config)
+```
+      <setting name="YourProjectName.Foundation.Security.AzureAuthorizationEnabled" value="true" />
+			<setting name="YourProjectName.Foundation.Security.AzureAudience" value="AzureAudience" />
+			<setting name="YourProjectName.Foundation.Security.ValidateAudience" value="true" />
+			<setting name="YourProjectName.Foundation.Security.AzureClientId" value="AzureClientId" />
+			<setting name="YourProjectName.Foundation.Security.AzureTenantId" value="AzureTenantId" />
+			<setting name="YourProjectName.Foundation.Security.AzureAuthority" value="https://login.microsoftonline.com/AzureTenantId/v2.0" />	
+```
+## ✋ Configure Unauthorized sitecore page
+Configure un authorized page under your sitecore start item. Example: sitecore/yourJSStenant/yourJSSwebsite/home/UnAuthorizedPage
 
+Note: If you want to change unauthorized action URL or logics , you can find code from the pipeline(https://github.com/andiappan-ar/sitecore-jss-msal/blob/main/src/platform/Foundation/Security/YourProjectName.Foundation.Security/Pipelines/AuthorizeContextItemResolver.cs)
 
-
-## 🔧 Setup microsoft identity wrapper
+## 🔧 Deploy layout service authentication pipeline
+Deploy the pipleine code and config in your sitecore backend.
 
 ## ▶️ Hit the layout service
+
+Hit the layout service,
+* If no Authorization header present , layout service will serve unauthorized page JSON.
+* If invalid token present in the header, layout service will serve unauthorized page JSON.
+* If valid token present in the header layout service will give the respective page results.
