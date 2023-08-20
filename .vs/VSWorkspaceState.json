@@ -1,0 +1,17 @@
+{
+  "ExpandedNodes": [
+    "",
+    "\\src",
+    "\\src\\platform",
+    "\\src\\platform\\Foundation",
+    "\\src\\platform\\Foundation\\Security",
+    "\\src\\platform\\Foundation\\Security\\YourProjectName.Foundation.Security",
+    "\\src\\platform\\Foundation\\Security\\YourProjectName.Foundation.Security\\App_Config",
+    "\\src\\platform\\Foundation\\Security\\YourProjectName.Foundation.Security\\App_Config\\Include",
+    "\\src\\platform\\Foundation\\Security\\YourProjectName.Foundation.Security\\App_Config\\Include\\Foundation",
+    "\\src\\platform\\Foundation\\Security\\YourProjectName.Foundation.Security\\Pipelines",
+    "\\src\\platform\\Foundation\\Security\\YourProjectName.Foundation.Security\\Properties"
+  ],
+  "SelectedNode": "\\src\\platform\\Foundation\\Security\\YourProjectName.Foundation.Security\\YourProjectName.Foundation.Security.csproj.user",
+  "PreviewInSolutionExplorer": false
+}
